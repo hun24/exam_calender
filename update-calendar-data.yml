@@ -1,0 +1,39 @@
+name: Update public calendar data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 18 1 * *' # 매월 1일 한국 시간 새벽 3시 17분 무렵
+
+permissions:
+  contents: write
+
+jobs:
+  update-calendar-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out calendar data repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch public API data
+        env:
+          HOLIDAY_API_KEY: ${{ secrets.HOLIDAY_API_KEY }}
+          NEIS_API_KEY: ${{ secrets.NEIS_API_KEY }}
+        run: python scripts/update_calendar_data.py
+
+      - name: Commit updated public data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/calendar-data.json
+          if git diff --cached --quiet; then
+            echo "변경된 일정 데이터가 없습니다."
+          else
+            git commit -m "Update public calendar data"
+            git push
+          fi
